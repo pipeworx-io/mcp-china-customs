@@ -3,7 +3,7 @@
   "name": "io.github.pipeworx-io/china-customs",
   "title": "China Customs",
   "description": "China Customs (GACC English) — monthly merchandise trade statistics.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "websiteUrl": "https://pipeworx.io/packs/china-customs",
   "repository": {
     "url": "https://github.com/pipeworx-io/mcp-china-customs",
