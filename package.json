@@ -1,6 +1,6 @@
 {
   "name": "@pipeworx/mcp-china-customs",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "China Customs (GACC English) — monthly merchandise trade statistics.",
   "type": "module",
   "main": "src/index.ts",
@@ -26,7 +26,7 @@
     "@cloudflare/workers-types": "^4.20260405.1"
   },
   "pipeworx": {
-    "sourceHash": "v1-993dc3f086bb625258ba0e19ea80cf0d1df05a0028cbb09f432b3045e14c75db",
-    "sourceCommit": "60f04b68c347e970c6be94a53439d1364061fc06"
+    "sourceHash": "v1-8a7362cf1accd935f9aa93c9d66ac70904fa560de2e312617eaf623f6d910187",
+    "sourceCommit": "babdd280d475dceddecc9ebf8f2a661712781a81"
   }
 }
