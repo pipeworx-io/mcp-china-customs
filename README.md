@@ -2,7 +2,7 @@
 
 China's official monthly merchandise trade statistics — total exports/imports/balance, by trading partner, by HS commodity section/chapter, and trade indices — scraped from the General Administration of Customs (GACC) **English-language** site, which is reachable where the mainland Chinese statistics database (`stats.customs.gov.cn`) 412-blocks non-China IPs.
 
-Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents to 1854+ live data sources. This is an independent, unofficial integration — not affiliated with, endorsed by, or published by the upstream provider.
+Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents to 1866+ live data sources. This is an independent, unofficial integration — not affiliated with, endorsed by, or published by the upstream provider.
 
 ## Tools
 
@@ -10,6 +10,7 @@ Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents 
 - `china_trade_by_country({ month?, partner? })` — exports/imports/balance by trading partner country/region, month + year-to-date, with YoY %, from GACC's "final" monthly release. `partner` is an optional substring filter (e.g. `"United States"`, `"Japan"`, `"Asia"`).
 - `china_trade_by_commodity({ month?, hs_section? })` — exports/imports by HS Section (21 sections) and 2-digit HS chapter (Division), month + year-to-date, with YoY %. Without `hs_section`, returns TOTAL + the 21 sections; with it (a 2-digit HS chapter code like `"84"`, or free text like `"machinery"`), also returns that section's individual chapters.
 - `china_trade_indices({ month?, direction?, series?, chained?, hs2? })` — unit-value / quantum / value indices for exports or imports, base = same month of the prior year = 100. `series`: `hs2` (default), `sitc2`, `bec`, `industry`, `hs4`, `sitc3`. `chained` selects the chained-index variant. Pass a 2-digit `hs2` chapter code to drill into one chapter. **Chapter/section labels in this specific GACC table are Chinese-only** — cross-reference the HS2 code against `china_trade_by_commodity` for the English name.
+- `china_trade_major_commodities({ direction?, month?, commodity?, limit? })` — GACC's official English monthly bulletin tables 13 (major exports) and 14 (major imports) in quantity and value: crude oil, soybeans, iron ore, steel, machinery, vehicles and more, month and year-to-date, US$1,000, with published percentage change. `commodity` filters by text; `available_months` shows what GACC has released (a month not yet on the English site, e.g. the latest, is reported as not available rather than guessed).
 
 ## Auth
 
@@ -81,7 +82,7 @@ directly, instead of just this one's:
 }
 ```
 
-Both URLs reach the same gateway and the same 1854+ data sources. The
+Both URLs reach the same gateway and the same 1866+ data sources. The
 only difference is which pack's tools are listed **directly**; `ask_pipeworx`
 reaches all of them from either one.
 

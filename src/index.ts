@@ -1520,6 +1520,93 @@ async function tradeIndices(args: Record<string, unknown>): Promise<unknown> {
 
 // ── tool registry ───────────────────────────────────────────────────
 
+// ── (5) major commodities in quantity and value — final monthly ──────
+
+interface MajorCommodityRow {
+  commodity: string;
+  depth: number;
+  quantity_unit: string | null;
+  month_quantity: number | null;
+  month_value_usd_thousand: number | null;
+  ytd_quantity: number | null;
+  ytd_value_usd_thousand: number | null;
+  pct_change_quantity: number | null;
+  pct_change_value: number | null;
+}
+
+function parseMajorCommodities(html: string): { title: string; unit: string; rows: MajorCommodityRow[] } {
+  const tableMatch = html.match(/<table[\s\S]*?<\/table>/i);
+  if (!tableMatch) throw new Error(`parse_error: expected table not found on a ${UPSTREAM_NAME} major-commodities page.`);
+  const rowsHtml = tableMatch[0].match(/<tr>[\s\S]*?<\/tr>/gi) ?? [];
+  let title = '';
+  let unit = '';
+  const rows: MajorCommodityRow[] = [];
+  for (const r of rowsHtml) {
+    const raw = (r.match(/<span>[\s\S]*?<\/span>/g) ?? []).map((x) => x.replace(/^<span>/, '').replace(/<\/span>$/, ''));
+    const cells = raw.map((c) => decodeEntities(c.replace(/<[^>]+>/g, '')));
+    if (!cells.length) continue;
+    if (!title && /Major (Export|Import) Commodities/i.test(cells[0])) { title = cells[0]; continue; }
+    if (!unit && /^Unit:/i.test(cells[0])) { unit = cells[0].replace(/^Unit:\s*/i, ''); continue; }
+    if (cells.length !== 8) continue;
+    const nbsp = (raw[0].match(/^(?:&nbsp;)+/) ?? [''])[0].length / 6;
+    rows.push({
+      commodity: cells[0].replace(/\*$/, ''),
+      depth: Math.round(nbsp / 4),
+      quantity_unit: cells[1] === '-' ? null : cells[1],
+      month_quantity: num(cells[2]),
+      month_value_usd_thousand: num(cells[3]),
+      ytd_quantity: num(cells[4]),
+      ytd_value_usd_thousand: num(cells[5]),
+      pct_change_quantity: num(cells[6]),
+      pct_change_value: num(cells[7]),
+    });
+  }
+  if (!title || !rows.length) {
+    throw new Error(`parse_error: ${UPSTREAM_NAME} major-commodities table layout did not match the expected shape.`);
+  }
+  return { title, unit, rows };
+}
+
+async function tradeMajorCommodities(args: Record<string, unknown>): Promise<unknown> {
+  const dir = String(args.direction ?? 'exports').toLowerCase();
+  if (dir !== 'exports' && dir !== 'imports') throw new Error('user_error: `direction` must be "exports" or "imports".');
+  const monthArg = parseMonthArg(args.month);
+  const word = dir === 'exports' ? 'Export' : 'Import';
+  const links = await getRowLinks(
+    IDX.monthly,
+    (t) => new RegExp(`Major ${word} Commodities`, 'i').test(t),
+    `Major ${word} Commodities in Quantity and Value`,
+  );
+  const link = resolveLink(links, monthArg);
+  const t = parseMajorCommodities(await fetchCachedHtml(link.url));
+  const q = typeof args.commodity === 'string' ? args.commodity.trim().toLowerCase() : '';
+  let rows = t.rows;
+  if (q) {
+    rows = rows.filter((r) => r.commodity.toLowerCase().includes(q));
+    if (!rows.length) {
+      throw new Error(`user_error: no commodity line matching "${args.commodity}" in this table. Omit \`commodity\` to list every line.`);
+    }
+  }
+  const lim = Math.min(Math.max(Number(args.limit) || 60, 1), 250);
+  const periodLabel = (t.title.match(/,\s*([0-9.\-]+)\s*$/) ?? [])[1] ?? t.title;
+  return {
+    direction: dir,
+    requested_month: monthArg ? `${monthArg.year}-${String(monthArg.monthNum).padStart(2, '0')}` : null,
+    period_label: periodLabel,
+    table: t.title,
+    unit: t.unit,
+    note:
+      "Line items as published by GACC, indented by hierarchy (depth 0 = group, higher = sub-item). A '-' in the quantity columns means GACC publishes value only for that line. " +
+      "pct_change_* are GACC's published Percentage Change columns, as printed in the bulletin.",
+    total_lines: t.rows.length,
+    returned: Math.min(rows.length, lim),
+    commodities: rows.slice(0, lim),
+    source: 'GACC, monthly customs statistics (major commodities)',
+    data_as_of: periodLabel,
+    available_months: links.map((l) => MONTH_ABBR[l.monthNum - 1]),
+  };
+}
+
 const tools: McpToolExport['tools'] = [
   {
     name: 'china_trade_summary',
@@ -1549,6 +1636,25 @@ const tools: McpToolExport['tools'] = [
       properties: {
         month: { type: 'string', description: 'Month as "YYYY-MM", e.g. "2026-07". Omit for the latest published month.' },
         partner: { type: 'string', description: 'Optional country/region name filter, e.g. "United States", "Korea", "Asia".' },
+      },
+    },
+  },
+  {
+    name: 'china_trade_major_commodities',
+    description:
+      "China's major export or import commodities in quantity and value (crude oil, soybeans, iron ore, steel, " +
+      'machinery, vehicles, chips and more), for the month and year-to-date, with published percentage change — from the ' +
+      'General Administration of Customs (GACC) official English monthly bulletin, table 13 (exports) / 14 (imports). ' +
+      'Defaults to the latest published month; the response lists `available_months`, so a month GACC has not yet ' +
+      'released is reported as unavailable rather than guessed. Values in US$1,000. Optional `commodity` text filter. ' +
+      '中国海关总署主要进出口商品量值表。',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        direction: { type: 'string', enum: ['exports', 'imports'], description: '"exports" (default) or "imports".' },
+        month: { type: 'string', description: 'Month as "YYYY-MM", e.g. "2026-08". Omit for the latest published month.' },
+        commodity: { type: 'string', description: 'Optional filter on the commodity line, e.g. "crude oil", "soybean", "steel".' },
+        limit: { type: 'number', description: 'Max lines returned (default 60, max 250).' },
       },
     },
   },
@@ -1599,6 +1705,8 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
       return tradeSummary(args);
     case 'china_trade_by_country':
       return tradeByCountry(args);
+    case 'china_trade_major_commodities':
+      return tradeMajorCommodities(args);
     case 'china_trade_by_commodity':
       return tradeByCommodity(args);
     case 'china_trade_indices':
