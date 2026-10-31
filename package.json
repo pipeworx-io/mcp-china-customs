@@ -1,6 +1,6 @@
 {
   "name": "@pipeworx/mcp-china-customs",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "China Customs (GACC English) — monthly merchandise trade statistics.",
   "type": "module",
   "main": "lib/index.js",
@@ -27,7 +27,7 @@
     "mode": "gateway",
     "slug": "china-customs",
     "gatewaySlug": "china-customs",
-    "sourceHash": "v1-70028bf6d5e4c16a535c0af7f31885ce4c98fdf755b084b114a89195491ac49f",
-    "sourceCommit": "4277282d72f9bf55e548b3799aaf737baf22152f"
+    "sourceHash": "v1-89f5bd477e5247de742a97366e00094d3feb08ca9164457d042775fe735189f5",
+    "sourceCommit": "547a3983b42dacf4389ca474860b0a1dee8e6053"
   }
 }
